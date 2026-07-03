@@ -301,18 +301,26 @@ body {
     color: var(--accent);
 }
 
-/* ---------- Responsive layout ---------- */
-.kpi-grid { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
-.dashboard-grid { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+/* ---------- Layout: neat 3-across grid (6 charts = tidy 3 x 2), centered ---------- */
+
+.dashboard-grid { grid-template-columns: repeat(3, 1fr); }
+.kpi-grid { grid-template-columns: repeat(4, 1fr); }
 
 .dashboard-grid .chart-card {
-    grid-column: auto !important;   /* neutralise the inline grid-column so cards reflow */
-    height: auto !important;        /* neutralise the inline height:430px so content fits */
+    grid-column: auto !important;   /* neutralise the inline grid-column */
+    height: auto !important;        /* neutralise the inline height:430px  */
     min-height: 430px;
 }
 .dashboard-grid .chart-card > div[id] { width: 100%; }
 .chart-card svg { width: 100%; height: auto; display: block; }
 
+/* Tablet / small laptop: 2 across */
+@media (max-width: 1100px) {
+    .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Header stacks on smaller screens */
 @media (max-width: 900px) {
     .dashboard-header {
         grid-template-columns: 1fr;
@@ -325,10 +333,12 @@ body {
     .header-title h1 { font-size: 26px; }
     .kpi-grid, .dashboard-grid { padding-left: 18px; padding-right: 18px; }
 }
-@media (max-width: 560px) {
-    .kpi-grid { grid-template-columns: 1fr 1fr; }
+
+/* Phone: single column */
+@media (max-width: 680px) {
+    .dashboard-grid { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: 1fr; }
     .kpi-value { font-size: 1.8rem; }
-    .kpi-title { font-size: 18px; }
 }
 
 /* ---------- Injected chart controls (bar toggle + map animation) ---------- */
