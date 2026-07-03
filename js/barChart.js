@@ -1,21 +1,65 @@
 // barChart.js
 // Analytical Question 2 — Visualisation 3: Horizontal Bar Chart
-// Compares renewable energy share (% of total final energy consumption) across countries.
-// Interactions: hover tooltip, year filtering, country selection/highlighting, and
-// linked highlighting with the other dashboard charts (scatter plot + choropleth map).
+//
+// Two modes (toggle in the chart header):
+//   • "Share (year)"      — ranks the leading countries by renewable energy share (%)
+//                           for the selected year (follows the global year filter).
+//   • "Progress '00->'20" — diverging chart of the CHANGE in renewable share between
+//                           2000 and 2020, showing the biggest improvers and decliners.
+//                           This directly answers "which countries made the greatest
+//                           progress in renewable energy development?".
+//
+// Interactions: hover tooltip, year filtering (share mode), mode toggle, country
+// selection, and linked highlighting with the scatter plots + choropleth map.
 
 function barChart(data) {
 
-    // ---- Layout (kept the same overall box size as the sibling charts) ----
+    // ---- Layout (same overall box as the sibling charts; responsive.js makes it fluid) ----
     const totalW = width + margin.left + margin.right;   // 460
     const totalH = height + margin.top + margin.bottom;  // 310
 
-    const m = { top: 15, right: 48, bottom: 34, left: 118 };
+    const m = { top: 15, right: 52, bottom: 34, left: 120 };
     const innerW = totalW - m.left - m.right;
     const innerH = totalH - m.top - m.bottom;
 
-    const TOP_N = 15;          // show the leading 15 countries
-    const DEFAULT_YEAR = 2020; // used when the global year filter is "All Years"
+    const TOP_N = 15;                     // share mode: leading N
+    const IMPROVERS = 10, DECLINERS = 5;  // progress mode: N up + N down
+    const DEFAULT_YEAR = 2020;
+
+    let mode = "share";                   // "share" | "progress"
+
+    // ---- Pre-compute the 2000 -> 2020 change per country (progress mode) ----
+    const v2000 = new Map(), v2020 = new Map();
+    data.forEach(d => {
+        const val = d.renewable_energy_share_pct;
+        if (val == null || isNaN(val)) return;
+        if (d.year === 2000) v2000.set(d.country, val);
+        if (d.year === 2020) v2020.set(d.country, val);
+    });
+    const progressAll = [];
+    v2000.forEach((val0, c) => {
+        if (v2020.has(c)) {
+            progressAll.push({ country: c, v2000: val0, v2020: v2020.get(c), delta: v2020.get(c) - val0 });
+        }
+    });
+    progressAll.sort((a, b) => b.delta - a.delta);
+
+    // ---- Inject the mode toggle into the card (persists across re-renders) ----
+    const container = d3.select("#vis3-container");
+    const controls = container.insert("div", "#vis3").attr("class", "chart-controls");
+    const btnShare = controls.append("button")
+        .attr("class", "toggle-btn active").text("Share")
+        .on("click", () => setMode("share"));
+    const btnProg = controls.append("button")
+        .attr("class", "toggle-btn").text("Progress '00->'20")
+        .on("click", () => setMode("progress"));
+
+    function setMode(newMode) {
+        mode = newMode;
+        btnShare.classed("active", mode === "share");
+        btnProg.classed("active", mode === "progress");
+        render();
+    }
 
     // ---- SVG scaffold (built once) ----
     const svg = d3.select("#vis3")
@@ -27,25 +71,21 @@ function barChart(data) {
         .attr("transform", `translate(${m.left}, ${m.top})`);
 
     const gY = svg.append("g").attr("class", "axis");
-    const gX = svg.append("g").attr("class", "axis")
-        .attr("transform", `translate(0, ${innerH})`);
+    const gX = svg.append("g").attr("class", "axis").attr("transform", `translate(0, ${innerH})`);
+    const zeroLine = svg.append("line")
+        .attr("y1", 0).attr("y2", innerH)
+        .attr("stroke", "#94a3a0").attr("stroke-width", 1)
+        .style("display", "none");
 
-    // Axis title + dynamic subtitle
-    svg.append("text")
-        .attr("x", innerW / 2)
-        .attr("y", innerH + 30)
+    const xTitle = svg.append("text")
+        .attr("x", innerW / 2).attr("y", innerH + 30)
         .attr("text-anchor", "middle")
-        .style("font-size", "12px")
-        .style("fill", "#4b6663")
-        .text("Renewable Energy Share (%)");
+        .style("font-size", "12px").style("fill", "#4b6663");
 
     const subtitle = svg.append("text")
-        .attr("class", "bar-subtitle")
-        .attr("x", innerW)
-        .attr("y", -2)
+        .attr("x", innerW).attr("y", -2)
         .attr("text-anchor", "end")
-        .style("font-size", "11px")
-        .style("font-weight", "700")
+        .style("font-size", "11px").style("font-weight", "700")
         .style("fill", "var(--teal-800)");
 
     const tooltip = d3.select("#tooltip3").style("opacity", 0);
@@ -53,125 +93,124 @@ function barChart(data) {
     // ---- Scales ----
     const xScale = d3.scaleLinear().range([0, innerW]);
     const yScale = d3.scaleBand().range([0, innerH]).padding(0.22);
+    const shareColor = d3.scaleLinear().range(["#5eead4", "#0f766e"]).interpolate(d3.interpolateRgb);
 
-    // teal ramp from light -> dark based on the value
-    const colorScale = d3.scaleLinear()
-        .range(["#5eead4", "#0f766e"])
-        .interpolate(d3.interpolateRgb);
-
-    // ---- Helpers ----
     function currentYear() {
         const v = d3.select("#year-filter").property("value");
         return v ? +v : DEFAULT_YEAR;
     }
 
-    function getRanked(year) {
-        // one row per country for the chosen year, valid renewable share
-        const rows = data.filter(d =>
-            d.year === year &&
-            d.renewable_energy_share_pct != null &&
-            !isNaN(d.renewable_energy_share_pct)
-        );
-
+    function getRows() {
+        if (mode === "progress") {
+            let rows = progressAll.slice(0, IMPROVERS).concat(progressAll.slice(-DECLINERS));
+            rows = rows.filter((r, i, a) => a.findIndex(x => x.country === r.country) === i);
+            if (selectedCountry && !rows.some(r => r.country === selectedCountry)) {
+                const sel = progressAll.find(r => r.country === selectedCountry);
+                if (sel) rows = rows.concat(sel);
+            }
+            return rows.map(r => ({ country: r.country, value: r.delta, meta: r }));
+        }
+        const year = currentYear();
+        let rows = data.filter(d =>
+            d.year === year && d.renewable_energy_share_pct != null && !isNaN(d.renewable_energy_share_pct));
         rows.sort((a, b) => b.renewable_energy_share_pct - a.renewable_energy_share_pct);
         let top = rows.slice(0, TOP_N);
-
-        // Make sure a selected country is always visible, even outside the top N
         if (selectedCountry && !top.some(d => d.country === selectedCountry)) {
             const sel = rows.find(d => d.country === selectedCountry);
             if (sel) top = top.concat(sel);
         }
-        return top;
+        return top.map(d => ({ country: d.country, value: d.renewable_energy_share_pct, meta: d, year }));
     }
 
-    // ---- Render (re-runs whenever the year / selection changes) ----
+    function colorFor(d) {
+        if (selectedCountry && d.country === selectedCountry) return "var(--accent)";
+        if (mode === "progress") return d.value >= 0 ? "#0d9488" : "#ef8c4b";
+        return shareColor(d.value);
+    }
+
     function render() {
-        const year = currentYear();
-        const ranked = getRanked(year);
+        const rows = getRows();
 
-        subtitle.text(`Top ${TOP_N} countries · ${year}`);
+        if (mode === "progress") {
+            subtitle.text("Change in share . 2000->2020");
+            xTitle.text("Change in Renewable Share (percentage points)");
+            const ext = d3.extent(rows, d => d.value);
+            const pad = Math.max(2, (ext[1] - ext[0]) * 0.05);
+            xScale.domain([Math.min(0, ext[0]) - pad, Math.max(0, ext[1]) + pad]);
+            gX.call(d3.axisBottom(xScale).ticks(5).tickFormat(d => (d > 0 ? "+" : "") + d));
+            zeroLine.style("display", null).attr("x1", xScale(0)).attr("x2", xScale(0));
+        } else {
+            subtitle.text(`Top ${TOP_N} countries . ${currentYear()}`);
+            xTitle.text("Renewable Energy Share (%)");
+            const maxVal = d3.max(rows, d => d.value) || 100;
+            xScale.domain([0, maxVal]).nice();
+            shareColor.domain([0, maxVal]);
+            gX.call(d3.axisBottom(xScale).ticks(5).tickFormat(d => d + "%"));
+            zeroLine.style("display", "none");
+        }
 
-        const maxVal = d3.max(ranked, d => d.renewable_energy_share_pct) || 100;
-        xScale.domain([0, maxVal]).nice();
-        yScale.domain(ranked.map(d => d.country));
-        colorScale.domain([0, maxVal]);
-
-        // Axes
+        yScale.domain(rows.map(d => d.country));
         gY.call(d3.axisLeft(yScale).tickSize(0));
         gY.select(".domain").remove();
-        gX.call(d3.axisBottom(xScale).ticks(5).tickFormat(d => d + "%"));
 
-        // Bars (data-joined by country)
-        const bars = svg.selectAll(".bar")
-            .data(ranked, d => d.country);
+        const base = xScale(mode === "progress" ? 0 : xScale.domain()[0]);
 
+        const bars = svg.selectAll(".bar").data(rows, d => d.country);
         bars.exit().remove();
-
-        const barsEnter = bars.enter()
-            .append("rect")
+        bars.enter().append("rect")
             .attr("class", "bar")
-            .attr("x", 0)
-            .attr("height", yScale.bandwidth())
-            .attr("width", 0)
+            .attr("x", base).attr("width", 0)
             .style("cursor", "pointer")
-            .on("mouseover", function (event, d) {
-                tooltip.style("opacity", 1)
-                    .html(`<strong>${d.country}</strong> (${d.year})<br>Renewable Share: ${d3.format(".2f")(d.renewable_energy_share_pct)}%`);
-            })
+            .on("mouseover", function (event, d) { tooltip.style("opacity", 1).html(tooltipHtml(d)); })
             .on("mousemove", function (event) {
-                tooltip.style("left", (event.offsetX + 15) + "px")
-                    .style("top", (event.offsetY + 15) + "px");
+                tooltip.style("left", (event.offsetX + 15) + "px").style("top", (event.offsetY + 15) + "px");
             })
-            .on("mouseout", function () {
-                tooltip.style("opacity", 0);
-            })
+            .on("mouseout", () => tooltip.style("opacity", 0))
             .on("click", function (event, d) {
                 selectedCountry = (selectedCountry === d.country) ? null : d.country;
                 updateGlobalHighlights();
-            });
-
-        barsEnter.merge(bars)
+            })
+            .merge(bars)
             .attr("y", d => yScale(d.country))
             .attr("height", yScale.bandwidth())
             .transition().duration(500)
-            .attr("width", d => xScale(d.renewable_energy_share_pct));
+            .attr("x", d => Math.min(xScale(d.value), base))
+            .attr("width", d => Math.abs(xScale(d.value) - base));
 
-        // Value labels at the end of each bar
-        const labels = svg.selectAll(".bar-value")
-            .data(ranked, d => d.country);
-
+        const labels = svg.selectAll(".bar-value").data(rows, d => d.country);
         labels.exit().remove();
-
-        labels.enter()
-            .append("text")
+        labels.enter().append("text")
             .attr("class", "bar-value")
-            .style("font-size", "10px")
-            .style("fill", "#4b6663")
+            .style("font-size", "10px").style("fill", "#4b6663")
             .merge(labels)
             .attr("y", d => yScale(d.country) + yScale.bandwidth() / 2 + 3)
+            .style("text-anchor", d => (mode === "progress" && d.value < 0) ? "end" : "start")
             .transition().duration(500)
-            .attr("x", d => xScale(d.renewable_energy_share_pct) + 4)
-            .text(d => d3.format(".1f")(d.renewable_energy_share_pct) + "%");
+            .attr("x", d => xScale(d.value) + ((mode === "progress" && d.value < 0) ? -4 : 4))
+            .text(d => (mode === "progress" && d.value > 0 ? "+" : "") + d3.format(".1f")(d.value) + (mode === "progress" ? "" : "%"));
 
         highlight();
     }
 
-    // ---- Highlighting (linked interaction) ----
+    function tooltipHtml(d) {
+        if (mode === "progress") {
+            const r = d.meta;
+            return `<strong>${d.country}</strong><br>2000: ${d3.format(".1f")(r.v2000)}%<br>2020: ${d3.format(".1f")(r.v2020)}%<br>Change: ${(r.delta >= 0 ? "+" : "")}${d3.format(".2f")(r.delta)} pp`;
+        }
+        return `<strong>${d.country}</strong> (${d.year})<br>Renewable Share: ${d3.format(".2f")(d.value)}%`;
+    }
+
     function highlight() {
         svg.selectAll(".bar")
-            .style("fill", d => (selectedCountry && d.country === selectedCountry)
-                ? "var(--accent)"
-                : colorScale(d.renewable_energy_share_pct))
+            .style("fill", d => colorFor(d))
             .style("opacity", d => (selectedCountry && d.country !== selectedCountry) ? 0.35 : 1)
             .style("stroke", d => (selectedCountry && d.country === selectedCountry) ? "#c2410c" : "none")
             .style("stroke-width", d => (selectedCountry && d.country === selectedCountry) ? 1.5 : 0);
-
         svg.selectAll(".bar-value")
             .style("font-weight", d => (selectedCountry && d.country === selectedCountry) ? "700" : "400")
             .style("opacity", d => (selectedCountry && d.country !== selectedCountry) ? 0.4 : 1);
     }
 
-    // Expose so index.html can re-render on filter change and refresh linked highlights
     window.renderBarChart = render;
     window.highlightBarChart = highlight;
 

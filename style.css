@@ -300,5 +300,67 @@ body {
     font-weight: 800;
     color: var(--accent);
 }
- 
- 
+
+/* ---------- Responsive layout ---------- */
+.kpi-grid { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.dashboard-grid { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+
+.dashboard-grid .chart-card {
+    grid-column: auto !important;   /* neutralise the inline grid-column so cards reflow */
+    height: auto !important;        /* neutralise the inline height:430px so content fits */
+    min-height: 430px;
+}
+.dashboard-grid .chart-card > div[id] { width: 100%; }
+.chart-card svg { width: 100%; height: auto; display: block; }
+
+@media (max-width: 900px) {
+    .dashboard-header {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        gap: 14px;
+        padding: 24px 20px;
+    }
+    .header-spacer { display: none; }
+    .control-panel { justify-content: center; flex-wrap: wrap; }
+    .header-title h1 { font-size: 26px; }
+    .kpi-grid, .dashboard-grid { padding-left: 18px; padding-right: 18px; }
+}
+@media (max-width: 560px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .kpi-value { font-size: 1.8rem; }
+    .kpi-title { font-size: 18px; }
+}
+
+/* ---------- Injected chart controls (bar toggle + map animation) ---------- */
+.chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+.toggle-btn {
+    border: 1px solid var(--teal-500);
+    background: #ffffff;
+    color: var(--teal-800);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+.toggle-btn:hover { background: var(--teal-100); }
+.toggle-btn.active {
+    background: var(--teal-700);
+    border-color: var(--teal-700);
+    color: #ffffff;
+}
+.map-play-btn {
+    background: var(--teal-700);
+    color: #fff; border: none; border-radius: 6px;
+    padding: 5px 14px; font-size: .8rem; font-weight: 600; cursor: pointer;
+}
+.map-play-btn:hover { background: var(--teal-800); }
+.map-year-slider { flex: 1; min-width: 90px; accent-color: var(--teal-700); cursor: pointer; }
+.map-year-label { font-size: 1rem; font-weight: 800; color: var(--accent); min-width: 42px; text-align: right; }

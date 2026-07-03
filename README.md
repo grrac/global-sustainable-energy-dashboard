@@ -137,20 +137,12 @@ redirecting `d3.csv(...)` to the embedded data. No changes to the original files
 
 **Run it locally**
 ```bash
+python -m venv .venv                     # create a virtual environment
+# Windows (PowerShell):  .\.venv\Scripts\Activate.ps1
+# macOS / Linux:         source .venv/bin/activate
 pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
-
-**Publish on Streamlit Community Cloud**
-1. Ensure `streamlit_app.py` and `requirements.txt` are at the **repo root**, next to
-   `index.html`, `style.css`, and the `js/` and `data/` folders. Push them to GitHub.
-2. Go to https://share.streamlit.io and sign in with GitHub.
-3. **Create app** → select the repository, branch, and set the main file to
-   `streamlit_app.py`.
-4. **Deploy.** Streamlit installs the dependency and serves the dashboard.
-
-> Since the dashboard is a static site, it can also be hosted for free on **GitHub Pages**
-> or any static host — just serve the repository root.
 
 ---
 
