@@ -127,6 +127,9 @@
         // Linked highlighting for the bar chart + choropleth map
         if (window.highlightBarChart) window.highlightBarChart();
         if (window.highlightChoropleth) window.highlightChoropleth();
+
+        if (window.highlightStackedArea) window.highlightStackedArea();
+        if (window.highlightLineChart) window.highlightLineChart();
     }
 
     d3.csv("data/cleaned_sustainable_energy.csv", d3.autoType).then(function(data) {
