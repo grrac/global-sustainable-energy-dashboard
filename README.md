@@ -84,7 +84,9 @@ average CO₂ emissions) summarise the dataset at the top of the dashboard.
 ├── streamlit_app.py               # Optional Streamlit wrapper for deployment
 ├── requirements.txt               # Python dependency for Streamlit
 ├── data/
-│   └── cleaned_sustainable_energy.csv
+│  ├── Data Preprocessing.ipynb
+│  ├── cleaned_sustainable_energy.csv
+│  └── global-data-on-sustainable-energy.csv  # Raw dataset
 └── js/
     ├── stackedArea.js             # Vis 1
     ├── linechart.js               # Vis 2
