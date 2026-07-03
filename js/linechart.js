@@ -1,8 +1,15 @@
-d3.csv("data/cleaned_sustainable_energy.csv", d3.autoType).then(data => {
+window.renderLineChart = function(data) {
+ 
+    const yearFilterVal = d3.select("#year-filter").property("value");
+    const selectedYear = yearFilterVal ? +yearFilterVal : null;
+ 
+    const filteredData = selectedCountry
+        ? data.filter(d => d.country === selectedCountry)
+        : data;
  
     const yearlyData = Array.from(
         d3.rollup(
-            data,
+            filteredData,
             v => ({
                 lowCarbon: d3.mean(v, d => d.low_carbon_electricity_pct)
             }),
@@ -19,9 +26,19 @@ d3.csv("data/cleaned_sustainable_energy.csv", d3.autoType).then(data => {
         .append("g")
         .attr("transform", `translate(${margin.left}, ${margin.top})`);
  
+    svg.append("text")
+        .attr("x", width / 2)
+        .attr("y", -6)
+        .attr("text-anchor", "middle")
+        .style("font-size", "11px")
+        .style("font-weight", "700")
+        .style("fill", "var(--teal-800)")
+        .text(selectedCountry ? selectedCountry : "All Countries (avg)");
+ 
+    d3.selectAll(".line-tooltip").remove();
     const tooltip = d3.select("body")
         .append("div")
-        .attr("class", "tooltip")
+        .attr("class", "tooltip line-tooltip")
         .style("position", "absolute")
         .style("background", "white")
         .style("color", "#111")
@@ -95,6 +112,29 @@ d3.csv("data/cleaned_sustainable_energy.csv", d3.autoType).then(data => {
         .attr("y", -45)
         .attr("text-anchor", "middle")
         .text("Low-carbon Electricity (%)");
+    if (selectedYear) {
+        const yd = yearlyData.find(d => d.year === selectedYear);
+        if (yd) {
+            svg.append("line")
+                .attr("class", "year-highlight")
+                .attr("x1", xScale(selectedYear))
+                .attr("x2", xScale(selectedYear))
+                .attr("y1", 0)
+                .attr("y2", height)
+                .attr("stroke", "#f97316")
+                .attr("stroke-width", 2)
+                .attr("stroke-dasharray", "4 3");
+ 
+            svg.append("circle")
+                .attr("class", "year-highlight")
+                .attr("cx", xScale(yd.year))
+                .attr("cy", yScale(yd.lowCarbon))
+                .attr("r", 7)
+                .attr("fill", "none")
+                .attr("stroke", "#f97316")
+                .attr("stroke-width", 2.5);
+        }
+    }
  
     const focusLine = svg.append("line")
         .attr("stroke", "#666")
@@ -150,4 +190,4 @@ d3.csv("data/cleaned_sustainable_energy.csv", d3.autoType).then(data => {
             focusDot.style("display", "none");
         });
  
-});
+}

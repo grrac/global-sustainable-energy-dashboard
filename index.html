@@ -168,6 +168,8 @@ d3.select("#reset-btn").on("click", function () {
     d3.select("#year-filter").property("value", "");
     d3.select("#country-filter").property("value", "");
     selectedCountry = null;
+    if (window.renderStackedArea) window.renderStackedArea(data);
+    if (window.renderLineChart) window.renderLineChart(data);
     if (window.renderBarChart) window.renderBarChart();
     if (window.renderChoropleth) window.renderChoropleth();
     updateGlobalHighlights();
@@ -212,25 +214,32 @@ d3.select("#reset-btn").on("click", function () {
     .text(d3.format(",.0f")(avgCO2));
 
     //  Charts 
-
+    window.renderStackedArea(data);
+    window.renderLineChart(data);
     scatterPlot(data);
     animatedScatter(data);
     barChart(data);       // Vis 3: Horizontal bar chart
     choropleth(data);     // Vis 4: Choropleth world map
 
-    // ---- Filter wiring for the bar chart + map (year & country) ----
-    d3.select("#year-filter").on("change.mine", function () {
-        if (window.renderBarChart) window.renderBarChart();
-        if (window.renderChoropleth) window.renderChoropleth();
-    });
+   // ---- Filter wiring for all charts (year & country) ----
+d3.select("#year-filter").on("change.mine", function () {
+    if (window.renderStackedArea) window.renderStackedArea(data);
+    if (window.renderLineChart) window.renderLineChart(data);
+    if (window.renderBarChart) window.renderBarChart();
+    if (window.renderChoropleth) window.renderChoropleth();
+});
 
-    d3.select("#country-filter").on("change.mine", function () {
-        const c = d3.select(this).property("value");
-        selectedCountry = c ? c : null;
-        if (window.renderBarChart) window.renderBarChart();
-        if (window.renderChoropleth) window.renderChoropleth();
-        updateGlobalHighlights();
-    });
+d3.select("#country-filter").on("change.mine", function () {
+    const c = d3.select(this).property("value");
+    selectedCountry = c ? c : null;
+
+    if (window.renderStackedArea) window.renderStackedArea(data);
+    if (window.renderLineChart) window.renderLineChart(data);
+    if (window.renderBarChart) window.renderBarChart();
+    if (window.renderChoropleth) window.renderChoropleth();
+
+    updateGlobalHighlights();
+});
 
    }).catch(error => console.error("Error loading data:", error));
    

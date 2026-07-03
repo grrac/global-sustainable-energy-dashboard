@@ -1,8 +1,15 @@
-d3.csv("data/cleaned_sustainable_energy.csv", d3.autoType).then(data => {
+window.renderStackedArea = function(data) {
+
+    const yearFilterVal = d3.select("#year-filter").property("value");
+    const selectedYear = yearFilterVal ? +yearFilterVal : null;
+ 
+    const filteredData = selectedCountry
+        ? data.filter(d => d.country === selectedCountry)
+        : data;
  
     const yearlyData = Array.from(
         d3.rollup(
-            data,
+            filteredData,
             v => ({
                 fossil: d3.sum(v, d => d.electricity_fossil_twh),
                 renewables: d3.sum(v, d => d.electricity_renewables_twh),
@@ -37,9 +44,20 @@ d3.csv("data/cleaned_sustainable_energy.csv", d3.autoType).then(data => {
         .append("g")
         .attr("transform", `translate(${chartMargin.left}, ${chartMargin.top})`);
  
+    // Subtitle showing the active country filter 
+    svg.append("text")
+        .attr("x", width / 2)
+        .attr("y", -legendRowHeight - 6)
+        .attr("text-anchor", "middle")
+        .style("font-size", "11px")
+        .style("font-weight", "700")
+        .style("fill", "var(--teal-800)")
+        .text(selectedCountry ? selectedCountry : "All Countries (sum)");
+ 
+    d3.selectAll(".area-tooltip").remove();
     const tooltip = d3.select("body")
     .append("div")
-    .attr("class", "tooltip")
+    .attr("class", "tooltip area-tooltip")
     .style("position", "absolute")
     .style("background", "white")
     .style("color", "#111")
@@ -146,6 +164,22 @@ d3.csv("data/cleaned_sustainable_energy.csv", d3.autoType).then(data => {
             focusLine.style("display", "none");
         });
  
+    if (selectedYear) {
+        const yd = yearlyData.find(d => d.year === selectedYear);
+        if (yd) {
+            svg.append("line")
+                .attr("class", "year-highlight")
+                .attr("x1", xScale(selectedYear))
+                .attr("x2", xScale(selectedYear))
+                .attr("y1", 0)
+                .attr("y2", height)
+                .attr("stroke", "#111827")
+                .attr("stroke-width", 2)
+                .attr("stroke-dasharray", "4 3")
+                .attr("opacity", 0.6);
+        }
+    }
+ 
     const legendItemWidth = width / keys.length;
  
     const legend = svg.selectAll(".legend")
@@ -175,4 +209,4 @@ d3.csv("data/cleaned_sustainable_energy.csv", d3.autoType).then(data => {
         .style("font-size", "12px")
         .text(d => legendLabels[d]);
  
-});
+}
