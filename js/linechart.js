@@ -1,12 +1,18 @@
 window.renderLineChart = function(data) {
  
+// Cache the dataset so linked interactions
+    window._energyData = data;
+
+    // Get selected year from the filter
     const yearFilterVal = d3.select("#year-filter").property("value");
     const selectedYear = yearFilterVal ? +yearFilterVal : null;
  
+    // Filter data based on the selected country
     const filteredData = selectedCountry
         ? data.filter(d => d.country === selectedCountry)
         : data;
  
+   // Aggregate average low-carbon electricity percentage by year
     const yearlyData = Array.from(
         d3.rollup(
             filteredData,
@@ -17,7 +23,8 @@ window.renderLineChart = function(data) {
         ),
         ([year, values]) => ({ year, ...values })
     ).sort((a, b) => a.year - b.year);
- 
+
+    // Create SVG container
     const svg = d3.select("#line-chart")
         .html("")
         .append("svg")
@@ -34,7 +41,8 @@ window.renderLineChart = function(data) {
         .style("font-weight", "700")
         .style("fill", "var(--teal-800)")
         .text(selectedCountry ? selectedCountry : "All Countries (avg)");
- 
+
+    // Create tooltip
     d3.selectAll(".line-tooltip").remove();
     const tooltip = d3.select("body")
         .append("div")
@@ -49,7 +57,7 @@ window.renderLineChart = function(data) {
         .style("box-shadow", "0px 2px 8px rgba(0,0,0,0.2)")
         .style("pointer-events", "none")
         .style("visibility", "hidden");
- 
+    // Create X and Y scales
     const xScale = d3.scaleLinear()
         .domain(d3.extent(yearlyData, d => d.year))
         .range([0, width]);
@@ -61,7 +69,7 @@ window.renderLineChart = function(data) {
         ])
         .nice()
         .range([height, 0]);
- 
+    // Generate line path
     const line = d3.line()
         .x(d => xScale(d.year))
         .y(d => yScale(d.lowCarbon))
@@ -81,7 +89,7 @@ window.renderLineChart = function(data) {
             d3.axisLeft(yScale)
                 .tickFormat(d => d + "%")
         );
- 
+   // Draw line chart
     svg.append("path")
         .datum(yearlyData)
         .attr("fill", "none")
@@ -89,6 +97,7 @@ window.renderLineChart = function(data) {
         .attr("stroke-width", 3)
         .attr("d", line);
  
+     // Draw data points
     svg.selectAll(".dot")
         .data(yearlyData)
         .join("circle")
@@ -112,6 +121,7 @@ window.renderLineChart = function(data) {
         .attr("y", -45)
         .attr("text-anchor", "middle")
         .text("Low-carbon Electricity (%)");
+    // Highlight the selected year
     if (selectedYear) {
         const yd = yearlyData.find(d => d.year === selectedYear);
         if (yd) {
@@ -124,7 +134,7 @@ window.renderLineChart = function(data) {
                 .attr("stroke", "#f97316")
                 .attr("stroke-width", 2)
                 .attr("stroke-dasharray", "4 3");
- 
+            // Highlight selected data point
             svg.append("circle")
                 .attr("class", "year-highlight")
                 .attr("cx", xScale(yd.year))
@@ -135,7 +145,7 @@ window.renderLineChart = function(data) {
                 .attr("stroke-width", 2.5);
         }
     }
- 
+   // Create interactive focus line and point
     const focusLine = svg.append("line")
         .attr("stroke", "#666")
         .attr("stroke-width", 1.5)
@@ -174,7 +184,7 @@ window.renderLineChart = function(data) {
                 .style("display", "block")
                 .attr("cx", xScale(selectedData.year))
                 .attr("cy", yScale(selectedData.lowCarbon));
- 
+             // Display tooltip
             tooltip
                 .style("visibility", "visible")
                 .style("top", (event.pageY + 15) + "px")
@@ -191,3 +201,8 @@ window.renderLineChart = function(data) {
         });
  
 }
+
+// Linked interaction 
+window.highlightLineChart = function () {
+    if (window._energyData) window.renderLineChart(window._energyData);
+};
