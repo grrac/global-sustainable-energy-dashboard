@@ -1,12 +1,13 @@
 window.renderStackedArea = function(data) {
-
+    
+    window._energyData = data;
     const yearFilterVal = d3.select("#year-filter").property("value");
     const selectedYear = yearFilterVal ? +yearFilterVal : null;
- 
+    
     const filteredData = selectedCountry
         ? data.filter(d => d.country === selectedCountry)
         : data;
- 
+    // Aggregate yearly electricity generation data
     const yearlyData = Array.from(
         d3.rollup(
             filteredData,
@@ -20,9 +21,11 @@ window.renderStackedArea = function(data) {
         ),
         ([year, values]) => ({ year, ...values })
     ).sort((a, b) => a.year - b.year);
- 
+
+    // Define stack categories
     const keys = ["fossil", "renewables", "nuclear"];
- 
+
+    // Display labels for legend
     const legendLabels = {
         fossil: "Fossil Fuels",
         renewables: "Renewables",
@@ -35,7 +38,8 @@ window.renderStackedArea = function(data) {
  
     const legendRowHeight = 26;
     const chartMargin = { ...margin, top: margin.top + legendRowHeight };
- 
+        
+    // Create SVG container
     const svg = d3.select("#stacked-area")
         .html("")
         .append("svg")
@@ -43,8 +47,8 @@ window.renderStackedArea = function(data) {
         .attr("height", height + chartMargin.top + chartMargin.bottom)
         .append("g")
         .attr("transform", `translate(${chartMargin.left}, ${chartMargin.top})`);
- 
-    // Subtitle showing the active country filter 
+
+    // Display currently selected country
     svg.append("text")
         .attr("x", width / 2)
         .attr("y", -legendRowHeight - 6)
@@ -53,7 +57,8 @@ window.renderStackedArea = function(data) {
         .style("font-weight", "700")
         .style("fill", "var(--teal-800)")
         .text(selectedCountry ? selectedCountry : "All Countries (sum)");
- 
+
+    // Create tooltip
     d3.selectAll(".area-tooltip").remove();
     const tooltip = d3.select("body")
     .append("div")
@@ -68,7 +73,8 @@ window.renderStackedArea = function(data) {
     .style("box-shadow", "0px 2px 8px rgba(0,0,0,0.2)")
     .style("pointer-events", "none")
     .style("visibility", "hidden");
- 
+
+    // Generate stacked data
     const stackedData = d3.stack()
         .keys(keys)(yearlyData);
  
@@ -120,7 +126,8 @@ window.renderStackedArea = function(data) {
         .attr("y", -55)
         .attr("text-anchor", "middle")
         .text("Electricity Generation (TWh)");
- 
+    
+     // Create vertical guideline for tooltip interaction
     const focusLine = svg.append("line")
         .attr("stroke", "#666")
         .attr("stroke-width", 1.5)
@@ -128,7 +135,8 @@ window.renderStackedArea = function(data) {
         .attr("y1", 0)
         .attr("y2", height)
         .style("display", "none");
- 
+    
+     // Transparent overlay to capture mouse events
     svg.append("rect")
         .attr("x", 0)
         .attr("y", 0)
@@ -136,18 +144,18 @@ window.renderStackedArea = function(data) {
         .attr("height", height)
         .attr("fill", "transparent")
         .on("mousemove", function (event) {
- 
+            // Find nearest year based on mouse position
             const mouseX = d3.pointer(event)[0];
             const year = Math.round(xScale.invert(mouseX));
             const selectedData = yearlyData.find(d => d.year === year);
  
             if (!selectedData) return;
- 
+            // Update focus line
             focusLine
                 .style("display", "block")
                 .attr("x1", xScale(year))
                 .attr("x2", xScale(year));
- 
+             // Display tooltip
             tooltip
                 .style("visibility", "visible")
                 .style("top", (event.pageY + 15) + "px")
@@ -163,7 +171,8 @@ window.renderStackedArea = function(data) {
             tooltip.style("visibility", "hidden");
             focusLine.style("display", "none");
         });
- 
+    
+     // Highlight selected year
     if (selectedYear) {
         const yd = yearlyData.find(d => d.year === selectedYear);
         if (yd) {
@@ -179,7 +188,7 @@ window.renderStackedArea = function(data) {
                 .attr("opacity", 0.6);
         }
     }
- 
+    // Create interactive legend
     const legendItemWidth = width / keys.length;
  
     const legend = svg.selectAll(".legend")
@@ -210,3 +219,7 @@ window.renderStackedArea = function(data) {
         .text(d => legendLabels[d]);
  
 }
+// Linked interaction 
+window.highlightStackedArea = function () {
+    if (window._energyData) window.renderStackedArea(window._energyData);
+};
