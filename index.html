@@ -1,1 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Global Sustainable Energy Dashboard</title>
 
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header class="dashboard-header">
+    <div class="header-spacer"></div>
+
+    <div class="header-title">
+        <h1>Global Sustainable Energy Dashboard</h1>
+        <p>SDG 7: Affordable and Clean Energy</p>
+    </div>
+
+    <div class="control-panel">
+    <select id="year-filter" class="mock-select">
+    <option value="">All Years</option>
+    </select>
+
+    <select id="country-filter" class="mock-select">
+    <option value="">All Countries</option>
+    </select>
+
+    <button id="reset-btn" class="reset-btn">Reset Filter</button>
+    </div>
+    
+</header>
+
+<div class="kpi-grid">
+    <div class="chart-card kpi-card">
+        <span class="kpi-title">Total Countries</span>
+        <p class="kpi-value" id="total-countries">XXX</p>
+        <span class="kpi-subtitle">2000–2020</span>
+    </div>
+
+    <div class="chart-card kpi-card">
+        <span class="kpi-title">Avg Renewable Share (%)</span>
+        <p class="kpi-value" id="avg-renewable">XX.XX%</p>
+
+    </div>
+
+    <div class="chart-card kpi-card">
+        <span class="kpi-title">Avg Access to Electricity (%)</span>
+        <p class="kpi-value" id="avg-electricity">XX.X%</p>
+    </div>
+
+    <div class="chart-card kpi-card">
+        <span class="kpi-title">Avg CO₂ Emissions (kt)</span>
+        <p class="kpi-value" id="avg-co2">XX.XX</p>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+
+    <div class="chart-card" style="height: 430px; grid-column: 1;">
+        <h3>Global Electricity Generation Mix</h3>
+        <div id="stacked-area"></div>
+    </div>
+
+    <div class="chart-card" id="vis4-container" style="height: 430px; grid-column: 2;">
+        <h3>Renewable Capacity per Capita by Country</h3>
+        <div id="vis4"></div>
+        <div class="tooltip" id="tooltip4"></div>
+    </div>
+
+    <div class="chart-card" id="vis5-container" style="height: 430px; grid-column: 3;">
+        <h3>Electricity Access vs. Economic Wealth</h3>
+        <div id="vis5"></div>
+        <div class="tooltip" id="tooltip5"></div>
+    </div>
+
+    <div class="chart-card" style="height: 430px; grid-column: 1;">
+        <h3>Low-carbon Electricity Trend </h3>
+        <div id="line-chart"></div>
+    </div>
+
+    <div class="chart-card" id="vis3-container" style="height: 430px; grid-column: 2;">
+        <h3>Top Countries by Renewable Energy Share</h3>
+        <div id="vis3"></div>
+        <div class="tooltip" id="tooltip3"></div>
+    </div>
+
+    <div class="chart-card" id="vis6-container" style="height: 430px; grid-column: 3;">
+        <h3>Clean Cooking Fuel Access Progression</h3>
+        <div id="vis6"></div>
+
+        <div class="controls">
+            <button id="play-button">Play</button>
+            <div id="current-year-display">Year: 2000</div>
+        </div>
+
+        <div class="tooltip" id="tooltip6"></div>
+    </div>
+     
+    
+</div>
+
+<script src="js/stackedArea.js"></script>
+<script src="js/linechart.js"></script>
+<script src="js/scatterPlot.js"></script>
+<script src="js/animatedScatter.js"></script>
+<script src="js/worldGeo.js"></script>
+<script src="js/barChart.js"></script>
+<script src="js/choropleth.js"></script>
+
+<script>
+    let selectedCountry = null;
+
+    const margin = { top: 20, right: 20, bottom: 40, left: 75 },
+          width = 460 - margin.left - margin.right,
+          height = 310 - margin.top - margin.bottom;
+
+    function updateGlobalHighlights() {
+        d3.selectAll(".dot")
+            .style("stroke", d => (selectedCountry && d.country === selectedCountry) ? "#e74c3c" : "#fff")
+            .style("stroke-width", d => (selectedCountry && d.country === selectedCountry) ? "3px" : "1px")
+            .style("opacity", d => (selectedCountry && d.country !== selectedCountry) ? 0.25 : 0.85);
+
+        // Linked highlighting for the bar chart + choropleth map
+        if (window.highlightBarChart) window.highlightBarChart();
+        if (window.highlightChoropleth) window.highlightChoropleth();
+    }
+
+    d3.csv("data/cleaned_sustainable_energy.csv", d3.autoType).then(function(data) {
+
+    data.forEach(d => {
+        d.country = d.country || d.entity;
+        d.year = +d.year;
+        d.gdp_per_capita = +d.gdp_per_capita;
+        d.access_electricity_pct = +d.access_electricity_pct;
+        d.clean_fuels_cooking_pct = +d.clean_fuels_cooking_pct;
+    });
+
+  // ================= Filter Options =================
+
+  const years = [...new Set(data.map(d => d.year))]
+    .sort((a, b) => a - b);
+
+  d3.select("#year-filter")
+    .selectAll("option.year-option")
+    .data(years)
+    .enter()
+    .append("option")
+    .attr("class", "year-option")
+    .attr("value", d => d)
+    .text(d => d);
+
+  const countries = [...new Set(data.map(d => d.country))]
+    .sort();
+
+  d3.select("#country-filter")
+    .selectAll("option.country-option")
+    .data(countries)
+    .enter()
+    .append("option")
+    .attr("class", "country-option")
+    .attr("value", d => d)
+    .text(d => d);
+
+d3.select("#reset-btn").on("click", function () {
+    d3.select("#year-filter").property("value", "");
+    d3.select("#country-filter").property("value", "");
+    selectedCountry = null;
+    if (window.renderBarChart) window.renderBarChart();
+    if (window.renderChoropleth) window.renderChoropleth();
+    updateGlobalHighlights();
+});
+
+  // ================= KPI =================
+
+  // Total number of countries
+  const totalCountries = new Set(data.map(d => d.country)).size;
+
+  // Average renewable energy share (%)
+  const avgRenewable = d3.mean(
+    data,
+    d => d.renewable_energy_share_pct
+  );
+
+  // Average electricity access (%)
+  const avgElectricity = d3.mean(
+    data,
+    d => d.access_electricity_pct
+  );
+
+// Average CO₂ emissions (kt)
+  const avgCO2 = d3.mean(
+    data,
+    d => d.co2_emissions_kt
+  );
+
+  
+
+  // Display KPI values
+  d3.select("#total-countries")
+    .text(totalCountries);
+
+  d3.select("#avg-renewable")
+    .text(d3.format(".2f")(avgRenewable) + "%");
+
+  d3.select("#avg-electricity")
+    .text(d3.format(".1f")(avgElectricity) + "%");
+
+  d3.select("#avg-co2")
+    .text(d3.format(",.0f")(avgCO2));
+
+    //  Charts 
+
+    scatterPlot(data);
+    animatedScatter(data);
+    barChart(data);       // Vis 3: Horizontal bar chart
+    choropleth(data);     // Vis 4: Choropleth world map
+
+    // ---- Filter wiring for the bar chart + map (year & country) ----
+    d3.select("#year-filter").on("change.mine", function () {
+        if (window.renderBarChart) window.renderBarChart();
+        if (window.renderChoropleth) window.renderChoropleth();
+    });
+
+    d3.select("#country-filter").on("change.mine", function () {
+        const c = d3.select(this).property("value");
+        selectedCountry = c ? c : null;
+        if (window.renderBarChart) window.renderBarChart();
+        if (window.renderChoropleth) window.renderChoropleth();
+        updateGlobalHighlights();
+    });
+
+   }).catch(error => console.error("Error loading data:", error));
+   
+</script>
+
+</body>
+</html>
