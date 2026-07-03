@@ -173,6 +173,8 @@ d3.select("#reset-btn").on("click", function () {
     if (window.renderLineChart) window.renderLineChart(data);
     if (window.renderBarChart) window.renderBarChart();
     if (window.renderChoropleth) window.renderChoropleth();
+    if (window.renderScatterPlot) window.renderScatterPlot();
+    if (window.renderScatterPlot) window.renderAnimatedScatter();
     updateGlobalHighlights();
 });
 
@@ -228,6 +230,8 @@ d3.select("#year-filter").on("change.mine", function () {
     if (window.renderLineChart) window.renderLineChart(data);
     if (window.renderBarChart) window.renderBarChart();
     if (window.renderChoropleth) window.renderChoropleth();
+    if (window.renderScatterPlot) window.renderScatterPlot();
+    if (window.renderScatterPlot) window.renderAnimatedScatter();
 });
 
 d3.select("#country-filter").on("change.mine", function () {
@@ -238,6 +242,8 @@ d3.select("#country-filter").on("change.mine", function () {
     if (window.renderLineChart) window.renderLineChart(data);
     if (window.renderBarChart) window.renderBarChart();
     if (window.renderChoropleth) window.renderChoropleth();
+    if (window.renderScatterPlot) window.renderScatterPlot();
+    if (window.renderScatterPlot) window.renderAnimatedScatter();
 
     updateGlobalHighlights();
 });
