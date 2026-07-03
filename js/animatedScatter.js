@@ -1,5 +1,5 @@
-// vis6.js
-// animatedScatter.js
+// js/animatedScatter.js
+
 function animatedScatter(data) {
     const svg = d3.select("#vis6")
         .append("svg")
@@ -66,6 +66,14 @@ function animatedScatter(data) {
  
     updateChart(currentYear);
  
+    function stopAnim() {
+        if (timer) {
+            clearInterval(timer);
+            timer = null;
+        }
+        d3.select("#play-button").text("Play");
+    }
+
     d3.select("#play-button").on("click", function() {
         const button = d3.select(this);
         if (button.text() === "Play") {
@@ -76,8 +84,22 @@ function animatedScatter(data) {
                 updateChart(currentYear);
             }, 600);
         } else {
-            button.text("Play");
-            clearInterval(timer);
+            stopAnim();
         }
     });
+
+    window.renderAnimatedScatter = function() {
+        const filterVal = d3.select("#year-filter").property("value");
+        if (filterVal) {
+            stopAnim();
+            currentYear = +filterVal;
+        }
+        updateChart(currentYear);
+    };
+
+    window.resetVis6Animation = function() {
+        stopAnim();
+        currentYear = 2000;
+        updateChart(currentYear);
+    };
 }
