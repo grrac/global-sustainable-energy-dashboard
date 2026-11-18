@@ -3,18 +3,6 @@
 An interactive data-visualisation dashboard exploring the world's progress toward
 **UN Sustainable Development Goal 7 – Affordable & Clean Energy**, built with **D3.js**.
 
-- **Course:** CDS6324 – Data Visualization
-- **Lecture / Tutorial Section:** TC2L / TT6L
-- **Group:** TT6L_G2
-
-| Student ID | Name |
-| :---: | :--- |
-| 1221306781 | Eng Xin Yee |
-| 1221101409 | Gracie Tan Tze Ling |
-| 1221102916 | Tan Jie Ting |
-
----
-
 ## Overview
 
 As countries adopt renewable energy and reduce their dependence on fossil fuels, the
